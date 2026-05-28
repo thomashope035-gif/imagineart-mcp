@@ -265,5 +265,62 @@ app.post('/messages', async (req, res) => {
 
 app.get('/health', (req, res) => res.json({ status: 'ok', server: 'imagineart-mcp' }));
 
+// ─── OAuth Metadata (tells Claude.ai no OAuth login is required) ──────────────
+
+const BASE_URL_OAUTH = process.env.RAILWAY_PUBLIC_DOMAIN
+  ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN}`
+  : `http://localhost:${process.env.PORT || 3000}`;
+
+app.get('/.well-known/oauth-authorization-server', (req, res) => {
+  res.json({
+    issuer: BASE_URL_OAUTH,
+    authorization_endpoint: `${BASE_URL_OAUTH}/oauth/authorize`,
+    token_endpoint: `${BASE_URL_OAUTH}/oauth/token`,
+    registration_endpoint: `${BASE_URL_OAUTH}/oauth/register`,
+    response_types_supported: ['code'],
+    grant_types_supported: ['authorization_code'],
+    code_challenge_methods_supported: ['S256']
+  });
+});
+
+app.get('/.well-known/openid-configuration', (req, res) => {
+  res.json({
+    issuer: BASE_URL_OAUTH,
+    authorization_endpoint: `${BASE_URL_OAUTH}/oauth/authorize`,
+    token_endpoint: `${BASE_URL_OAUTH}/oauth/token`,
+    registration_endpoint: `${BASE_URL_OAUTH}/oauth/register`,
+    response_types_supported: ['code'],
+    grant_types_supported: ['authorization_code']
+  });
+});
+
+app.post('/oauth/register', (req, res) => {
+  const clientId = randomUUID();
+  res.status(201).json({
+    client_id: clientId,
+    client_secret: randomUUID(),
+    redirect_uris: req.body?.redirect_uris || [],
+    grant_types: ['authorization_code'],
+    response_types: ['code']
+  });
+});
+
+app.get('/oauth/authorize', (req, res) => {
+  const { redirect_uri, state, code_challenge, code_challenge_method } = req.query;
+  const code = randomUUID();
+  const url = new URL(redirect_uri);
+  url.searchParams.set('code', code);
+  if (state) url.searchParams.set('state', state);
+  res.redirect(url.toString());
+});
+
+app.post('/oauth/token', express.urlencoded({ extended: true }), (req, res) => {
+  res.json({
+    access_token: randomUUID(),
+    token_type: 'bearer',
+    expires_in: 86400
+  });
+});
+
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`ImagineArt MCP running on port ${PORT}`));
