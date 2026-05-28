@@ -6,6 +6,7 @@ import express from 'express';
 import FormData from 'form-data';
 import fetch from 'node-fetch';
 import { randomUUID } from 'crypto';
+import cors from 'cors';
 
 const BASE_URL = 'https://api.vyro.ai/v2';
 
@@ -209,6 +210,7 @@ function createMCPServer() {
 // ─── Express ──────────────────────────────────────────────────────────────────
 
 const app = express();
+app.use(cors({ origin: '*', methods: ['GET', 'POST', 'DELETE', 'OPTIONS'], allowedHeaders: ['*'] }));
 app.use(express.json());
 
 // StreamableHTTP — what Claude.ai uses
